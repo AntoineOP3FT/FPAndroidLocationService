@@ -1,7 +1,36 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+val envFile = rootProject.file(".env")
+val envProperties = Properties()
+
+println("🔍 Looking for .env file at: ${envFile.absolutePath}")
+println("🔍 .env file exists: ${envFile.exists()}")
+
+if (envFile.exists()) {
+    try {
+        envProperties.load(FileInputStream(envFile))
+        println("✅ Successfully loaded .env file")
+
+        // Debug: Print all loaded properties (remove in production!)
+        println("📋 Loaded properties:")
+        envProperties.forEach { key, value ->
+            println("   $key = ${value.toString().take(10)}...")
+        }
+
+    } catch (e: Exception) {
+        println("❌ Error loading .env file: ${e.message}")
+    }
+} else {
+    println("❌ .env file not found!")
+    println("📁 Expected location: ${envFile.absolutePath}")
+    println("📁 Current working directory: ${System.getProperty("user.dir")}")
 }
 
 android {
@@ -16,6 +45,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+
+        // Debug: Check what values are being set
+        val vivatechPositionsKey = envProperties.getProperty("VIVATECH_POSITIONS_KEY") ?: "KEY_NOT_FOUND"
+        val serverUrl = envProperties.getProperty("SERVER_URL") ?: "KEY_NOT_FOUND"
+
+        buildConfigField("String", "VIVATECH_POSITIONS_KEY", "\"$vivatechPositionsKey\"")
+        buildConfigField("String", "SERVER_URL", "\"$serverUrl\"")
     }
 
     buildTypes {
@@ -36,6 +73,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true  // Enable BuildConfig generation
     }
 }
 

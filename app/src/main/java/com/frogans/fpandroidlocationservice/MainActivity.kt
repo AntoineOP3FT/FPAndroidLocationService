@@ -1,6 +1,5 @@
 package com.frogans.fpandroidlocationservice
 
-
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -11,7 +10,6 @@ import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import kotlin.math.log
 
 class MainActivity : AppCompatActivity() {
     private val REQUEST_PERMISSIONS = 1
@@ -42,7 +40,12 @@ class MainActivity : AppCompatActivity() {
         saveButton.setOnClickListener {
             val enteredUsername = usernameEditText.text.toString()
 
-            if (enteredUsername.isNotEmpty()) {
+            if (enteredUsername.isNotEmpty() &&
+                enteredUsername != sharedPreferences.getString("username", "") ) {
+
+
+                sendDeleteRequest()
+
                 // Save username to SharedPreferences
                 with (sharedPreferences.edit()) {
                     putString("username", enteredUsername)
@@ -52,7 +55,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Username saved!", Toast.LENGTH_SHORT).show()
                 currentUsernameTextView.text = "Current username: $enteredUsername"
             } else {
-                Toast.makeText(this, "Please enter a username.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please enter a valid username.", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -86,6 +89,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startLocationService() {
         val intent = Intent(this, LocationService::class.java)
+        //intent.putExtra("serverHelper", serverHelper)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         }
@@ -101,6 +105,36 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_PERMISSIONS && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
             startLocationService()
         }
+    }
+
+    private fun sendDeleteRequest(){
+        val sharedPreferences = getSharedPreferences(sharedPrefFile, Context.MODE_PRIVATE)
+        val username = sharedPreferences.getString("username", "")
+
+        if (username.isNullOrEmpty()) {
+            Log.w("LocationService", "Username is empty, not sending location.")
+            //stopSelf() // Optionally stop the service
+            return
+        }
+
+        val key = BuildConfig.VIVATECH_POSITIONS_KEY
+
+        val json = """
+            {
+                "name": "$username",
+                "key":"$key"
+            }
+        """.trimIndent()
+
+        ServerController.sendDeleteRequest(json)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        stopService(Intent(this, LocationService::class.java))
+
+        sendDeleteRequest()
     }
 }
 

@@ -24,7 +24,6 @@ class LocationService : Service() {
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
     private val client = OkHttpClient()
-    private val serverUrl = "http://192.168.3.117:5005/positions"
     private val sharedPrefFile = "com.frogans.fpandroidlocationservice.prefs"
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
@@ -88,43 +87,20 @@ class LocationService : Service() {
 
         Log.d("LocationService", "Sending location: $lat, $lng with user: $username")
 
+        val key = BuildConfig.VIVATECH_POSITIONS_KEY
+
         val json = """
         {
             "name": "$username",
             "pos": {
                 "lat": $lat,
                 "lng": $lng
-            }
+            },
+            "key":"$key"
         }
     """.trimIndent()
 
-        val requestBody = RequestBody.create(
-            "application/json; charset=utf-8".toMediaTypeOrNull(),
-            json
-        )
-
-
-        // Build the request (change URL to your server)
-        val request = Request.Builder()
-            .url(serverUrl)  // Replace with your actual URL
-            .put(requestBody)
-            .build()
-
-        // Execute the request asynchronously
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("LocationService", "Failed to send location: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    Log.d("LocationService", "Location sent successfully")
-                } else {
-                    Log.e("LocationService", "Server error: ${response.code}")
-                }
-                response.close()
-            }
-        })
+        ServerController.sendPutRequest(json)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
